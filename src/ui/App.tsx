@@ -1,32 +1,82 @@
 import React, { useState, useEffect } from 'react';
-import { Header } from './components/Header';
-import { NavigationBar, ActiveTab } from './components/NavigationBar';
-import { ArrangementView } from './components/ArrangementView';
-import { StepSequencerView } from './components/StepSequencerView';
-import { PianoRollView } from './components/PianoRollView';
-import { MixerView } from './components/MixerView';
-import { AudioEditorView } from './components/AudioEditorView';
+import { FLHeader } from './components/FLHeader';
+import { WindowFrame } from './components/WindowFrame';
+import { FLChannelRack } from './components/FLChannelRack';
+import { FLMixer } from './components/FLMixer';
+import { FLEqualizer } from './components/FLEqualizer';
+import { FLPianoRoll } from './components/FLPianoRoll';
+import { FLPlaylist } from './components/FLPlaylist';
 import { InstrumentPanel } from './components/InstrumentPanel';
+import { AudioEditorView } from './components/AudioEditorView';
 import { ExportDialog } from './components/ExportDialog';
 import { AIAssistantModal } from './components/AIAssistantModal';
 import { HelpGuideModal } from './components/HelpGuideModal';
 import { ProjectManager } from '../storage/ProjectManager';
 import { Project, AudioClip } from '../types/project';
 import { globalAudioEngine } from '../audio/AudioEngine';
+import {
+  Grid,
+  Sliders,
+  Activity,
+  Piano,
+  LayoutGrid,
+  Cpu,
+  AudioWaveform,
+  Sparkles,
+} from 'lucide-react';
 
 export const App: React.FC = () => {
   const [projectManager] = useState(() => new ProjectManager());
   const [project, setProject] = useState<Project>(() => projectManager.project);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('arrangement');
-  const [isRecording, setIsRecording] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [showAIModal, setShowAIModal] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
 
-  // Global Keyboard Shortcuts
+  // FL Studio Multi-Window System State
+  const [openWindows, setOpenWindows] = useState<Record<string, boolean>>({
+    channelrack: true,
+    mixer: true,
+    eq: true,
+    playlist: true,
+    pianoroll: false,
+    synth: false,
+    audioeditor: false,
+    ai: false,
+  });
+
+  const [topWindowId, setTopWindowId] = useState<string>('channelrack');
+  const [windowZIndices, setWindowZIndices] = useState<Record<string, number>>({
+    playlist: 10,
+    channelrack: 25,
+    mixer: 20,
+    eq: 30,
+    pianoroll: 15,
+    synth: 12,
+    audioeditor: 14,
+    ai: 50,
+  });
+
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [zCounter, setZCounter] = useState(60);
+
+  const bringToFront = (id: string) => {
+    setTopWindowId(id);
+    setZCounter((prev) => {
+      const next = prev + 1;
+      setWindowZIndices((indices) => ({ ...indices, [id]: next }));
+      return next;
+    });
+  };
+
+  const toggleWindow = (id: string) => {
+    setOpenWindows((prev) => {
+      const nextOpen = !prev[id];
+      if (nextOpen) bringToFront(id);
+      return { ...prev, [id]: nextOpen };
+    });
+  };
+
+  // Keyboard Shortcuts (FL Studio style: Space, F5, F6, F7, F9, Ctrl+S)
   useEffect(() => {
     const handleKeyDown = async (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in an input or select
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
         return;
       }
@@ -40,81 +90,34 @@ export const App: React.FC = () => {
         } else {
           globalAudioEngine.transport.play();
         }
-      } else if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey) {
+      } else if (e.code === 'KeyR' && !e.ctrlKey) {
         e.preventDefault();
-        handleToggleRecord();
+        if (globalAudioEngine.transport.state === 'recording') {
+          globalAudioEngine.transport.stop();
+        } else {
+          globalAudioEngine.transport.record();
+        }
+      } else if (e.code === 'F5') {
+        e.preventDefault();
+        toggleWindow('playlist');
+      } else if (e.code === 'F6') {
+        e.preventDefault();
+        toggleWindow('channelrack');
+      } else if (e.code === 'F7') {
+        e.preventDefault();
+        toggleWindow('pianoroll');
+      } else if (e.code === 'F9') {
+        e.preventDefault();
+        toggleWindow('mixer');
       } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         handleSaveProject();
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        if (projectManager.undo()) {
-          setProject({ ...projectManager.project });
-        }
-      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
-        e.preventDefault();
-        if (projectManager.redo()) {
-          setProject({ ...projectManager.project });
-        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [projectManager, isRecording]);
-
-  // Audio Recording Toggle
-  const handleToggleRecord = async () => {
-    await globalAudioEngine.init();
-    await globalAudioEngine.resume();
-
-    if (!isRecording) {
-      // Find armed track or default to audio track
-      const armedTrack = project.tracks.find((t) => t.armed) || project.tracks.find((t) => t.type === 'audio');
-      const trackId = armedTrack ? armedTrack.id : 'track-4';
-
-      if (globalAudioEngine.recorder) {
-        const success = await globalAudioEngine.recorder.requestPermissionAndStart(
-          trackId,
-          globalAudioEngine.transport.currentBeat
-        );
-        if (success) {
-          setIsRecording(true);
-          globalAudioEngine.transport.record();
-        }
-      }
-    } else {
-      setIsRecording(false);
-      globalAudioEngine.transport.stop();
-
-      if (globalAudioEngine.recorder) {
-        const take = globalAudioEngine.recorder.stopRecording(globalAudioEngine.transport.currentBeat);
-        if (take) {
-          // Append recorded audio clip to armed track
-          const newClip: AudioClip = {
-            id: `clip-rec-${Date.now()}`,
-            name: `Take ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-            type: 'audio',
-            audioBufferId: take.id,
-            startTime: take.startBeat,
-            duration: take.durationBeats,
-            offset: 0,
-            gain: 1.0,
-            fadeIn: 0.05,
-            fadeOut: 0.05,
-            color: '#10b981',
-          };
-
-          setProject((prev) => ({
-            ...prev,
-            tracks: prev.tracks.map((t) =>
-              t.id === take.trackId ? { ...t, clips: [...t.clips, newClip] } : t
-            ),
-          }));
-        }
-      }
-    }
-  };
+  }, [projectManager]);
 
   const handleBpmChange = (newBpm: number) => {
     globalAudioEngine.transport.bpm = newBpm;
@@ -134,49 +137,35 @@ export const App: React.FC = () => {
     a.click();
   };
 
-  const handleOpenProject = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.cadence,.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (re) => {
-        const content = re.target?.result as string;
-        if (projectManager.deserialize(content)) {
-          setProject({ ...projectManager.project });
-          globalAudioEngine.transport.bpm = projectManager.project.metadata.bpm;
-        }
-      };
-      reader.readAsText(file);
-    };
-    input.click();
-  };
-
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#121316] text-[#e0e2ec]">
-      {/* Studio Top Header */}
-      <Header
-        projectTitle={project.metadata.title}
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#101218] text-[#e0e2ec] font-sans select-none">
+      {/* 1. FL Studio Top Navigation & Transport Header */}
+      <FLHeader
         bpm={project.metadata.bpm}
         onBpmChange={handleBpmChange}
-        onSave={handleSaveProject}
-        onOpen={handleOpenProject}
+        openWindows={openWindows}
+        onToggleWindow={toggleWindow}
         onExport={() => setShowExportModal(true)}
-        onOpenAIModal={() => setShowAIModal(true)}
         onOpenHelp={() => setShowHelpModal(true)}
-        onRecordToggle={handleToggleRecord}
-        isRecording={isRecording}
       />
 
-      {/* Navigation Workspace Selector */}
-      <NavigationBar activeTab={activeTab} onTabChange={setActiveTab} />
-
-      {/* Main Workspace Display */}
-      <main className="flex-1 flex overflow-hidden relative">
-        {activeTab === 'arrangement' && (
-          <ArrangementView
+      {/* 2. FL Studio Multi-Window Desktop Workspace */}
+      <main className="flex-1 relative overflow-hidden bg-[radial-gradient(#1e2433_1px,transparent_1px)] [background-size:20px_20px] bg-[#0e1017]">
+        {/* Window A: Playlist / Arrangement (Background Left/Top) */}
+        <WindowFrame
+          id="playlist"
+          title="Playlist - Tracks & Arrangement"
+          icon={<LayoutGrid size={13} />}
+          initialX={30}
+          initialY={15}
+          width={680}
+          height={260}
+          isOpen={openWindows.playlist}
+          zIndex={windowZIndices.playlist}
+          onClose={() => toggleWindow('playlist')}
+          onFocus={() => bringToFront('playlist')}
+        >
+          <FLPlaylist
             project={project}
             onUpdateProject={(updater) => {
               setProject((prev) => {
@@ -186,24 +175,112 @@ export const App: React.FC = () => {
               });
             }}
           />
-        )}
+        </WindowFrame>
 
-        {activeTab === 'sequencer' && (
-          <StepSequencerView onOpenAI={() => setShowAIModal(true)} />
-        )}
+        {/* Window B: Channel Rack / Step Sequencer (Center Top) */}
+        <WindowFrame
+          id="channelrack"
+          title="Channel Rack - 808 / 909 Beat Sequencer"
+          icon={<Grid size={13} />}
+          initialX={280}
+          initialY={20}
+          width={640}
+          height={320}
+          isOpen={openWindows.channelrack}
+          zIndex={windowZIndices.channelrack}
+          onClose={() => toggleWindow('channelrack')}
+          onFocus={() => bringToFront('channelrack')}
+        >
+          <FLChannelRack onOpenAI={() => toggleWindow('ai')} />
+        </WindowFrame>
 
-        {activeTab === 'pianoroll' && (
-          <PianoRollView onOpenAI={() => setShowAIModal(true)} />
-        )}
+        {/* Window C: Studio Mixer (Bottom Left) */}
+        <WindowFrame
+          id="mixer"
+          title="Mixer - Master & Inserts Routing"
+          icon={<Sliders size={13} />}
+          initialX={20}
+          initialY={290}
+          width={760}
+          height={330}
+          isOpen={openWindows.mixer}
+          zIndex={windowZIndices.mixer}
+          onClose={() => toggleWindow('mixer')}
+          onFocus={() => bringToFront('mixer')}
+        >
+          <FLMixer />
+        </WindowFrame>
 
-        {activeTab === 'mixer' && <MixerView />}
+        {/* Window D: Fruity Parametric EQ 2 (Bottom Right) */}
+        <WindowFrame
+          id="eq"
+          title="Fruity Parametric EQ 2 - Spectrum Visualizer"
+          icon={<Activity size={13} />}
+          initialX={790}
+          initialY={260}
+          width={580}
+          height={350}
+          isOpen={openWindows.eq}
+          zIndex={windowZIndices.eq}
+          onClose={() => toggleWindow('eq')}
+          onFocus={() => bringToFront('eq')}
+        >
+          <FLEqualizer />
+        </WindowFrame>
 
-        {activeTab === 'audioeditor' && <AudioEditorView />}
+        {/* Window E: Piano Roll (Floating) */}
+        <WindowFrame
+          id="pianoroll"
+          title="Piano Roll - Notes & Scale Editor"
+          icon={<Piano size={13} />}
+          initialX={200}
+          initialY={60}
+          width={720}
+          height={380}
+          isOpen={openWindows.pianoroll}
+          zIndex={windowZIndices.pianoroll}
+          onClose={() => toggleWindow('pianoroll')}
+          onFocus={() => bringToFront('pianoroll')}
+        >
+          <FLPianoRoll onOpenAI={() => toggleWindow('ai')} />
+        </WindowFrame>
 
-        {activeTab === 'synth' && <InstrumentPanel />}
+        {/* Window F: Analog Subtractive Synthesizer */}
+        <WindowFrame
+          id="synth"
+          title="Analog Subtractive Synth - Dual Osc & Ladder Filter"
+          icon={<Cpu size={13} />}
+          initialX={150}
+          initialY={50}
+          width={780}
+          height={400}
+          isOpen={openWindows.synth}
+          zIndex={windowZIndices.synth}
+          onClose={() => toggleWindow('synth')}
+          onFocus={() => bringToFront('synth')}
+        >
+          <InstrumentPanel />
+        </WindowFrame>
+
+        {/* Window G: Dedicated Audio Editor */}
+        <WindowFrame
+          id="audioeditor"
+          title="Audio Editor - Waveform Trim & Normalize"
+          icon={<AudioWaveform size={13} />}
+          initialX={180}
+          initialY={80}
+          width={740}
+          height={360}
+          isOpen={openWindows.audioeditor}
+          zIndex={windowZIndices.audioeditor}
+          onClose={() => toggleWindow('audioeditor')}
+          onFocus={() => bringToFront('audioeditor')}
+        >
+          <AudioEditorView />
+        </WindowFrame>
       </main>
 
-      {/* Modals & Dialogs */}
+      {/* Modals */}
       <ExportDialog
         project={project}
         isOpen={showExportModal}
@@ -212,10 +289,9 @@ export const App: React.FC = () => {
 
       <AIAssistantModal
         project={project}
-        isOpen={showAIModal}
-        onClose={() => setShowAIModal(false)}
+        isOpen={openWindows.ai}
+        onClose={() => toggleWindow('ai')}
         onApplyMelody={(notes) => {
-          // Put generated notes in track 2 (Synth Lead)
           setProject((prev) => ({
             ...prev,
             tracks: prev.tracks.map((t, idx) =>
@@ -225,7 +301,7 @@ export const App: React.FC = () => {
                     clips: [
                       {
                         id: `clip-ai-${Date.now()}`,
-                        name: 'AI Motif',
+                        name: 'AI Melodic Motif',
                         type: 'midi',
                         startTime: 0,
                         duration: 16,
@@ -238,9 +314,14 @@ export const App: React.FC = () => {
                 : t
             ),
           }));
+          // Auto-open and focus the Piano Roll so user sees the newly populated notes!
+          setOpenWindows((prev) => ({ ...prev, pianoroll: true }));
+          bringToFront('pianoroll');
         }}
         onApplyDrums={(lanes, swing) => {
-          // Re-render
+          // Force Channel Rack re-render and focus
+          setOpenWindows((prev) => ({ ...prev, channelrack: true }));
+          bringToFront('channelrack');
         }}
       />
 
