@@ -1,0 +1,45 @@
+{
+  "name": "cadence-studio",
+  "productName": "Cadence Studio",
+  "version": "1.0.0",
+  "description": "Next-generation open-source All-in-One Digital Audio Workstation",
+  "main": "electron/main.cjs",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "app": "electron ."
+  },
+  "keywords": [
+    "daw",
+    "audio",
+    "music-production",
+    "synthesizer",
+    "sampler",
+    "step-sequencer",
+    "piano-roll",
+    "dsp",
+    "mixer",
+    "vst3",
+    "open-source"
+  ],
+  "author": "Cadence Studio Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "lucide-react": "^1.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^33.2.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.1",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,150 @@
+/* Cadence Studio - Professional Dark DAW Design System */
+
+:root {
+  --bg-app: #121316;
+  --bg-surface: #1a1c22;
+  --bg-surface-elevated: #242730;
+  --bg-surface-active: #2f3442;
+  --border-color: #2e3340;
+  --border-focus: #4f46e5;
+  --text-primary: #f1f3f9;
+  --text-secondary: #9aa1b2;
+  --text-muted: #5e6678;
+  --accent-primary: #4f46e5;
+  --accent-secondary: #06b6d4;
+  --accent-success: #10b981;
+  --accent-warning: #f59e0b;
+  --accent-danger: #ef4444;
+  --fader-cap: #e0e7ff;
+  --meter-green: #22c55e;
+  --meter-yellow: #eab308;
+  --meter-red: #ef4444;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  user-select: none;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Custom Scrollbar for Studio Timeline */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: #393e4d;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4f566b;
+}
+
+/* Studio Fader & Range Sliders */
+input[type='range'] {
+  -webkit-appearance: none;
+  background: #252833;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent-secondary);
+  box-shadow: 0 0 8px rgba(6, 182, 212, 0.5);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+/* Vertical Mixer Faders */
+.vertical-fader {
+  writing-mode: bt-lr; /* IE */
+  -webkit-appearance: slider-vertical;
+  width: 18px;
+  height: 140px;
+  background: #1c1e26;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* LED Meters */
+.led-meter {
+  width: 6px;
+  height: 140px;
+  background: #181920;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+.led-meter-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, var(--meter-green) 70%, var(--meter-yellow) 88%, var(--meter-red) 98%);
+  transition: height 0.05s ease;
+}
+
+/* Step Sequencer Pad */
+.step-pad {
+  width: 28px;
+  height: 38px;
+  border-radius: 4px;
+  background-color: #242732;
+  border: 1px solid #333847;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+.step-pad:hover {
+  border-color: #555d73;
+  transform: translateY(-1px);
+}
+.step-pad.active {
+  background: linear-gradient(135deg, #f43f5e, #be123c);
+  border-color: #fb7185;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+}
+.step-pad.beat-marker {
+  border-left: 2px solid #6366f1;
+}
+
+/* Tooltips */
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #0b0c0e;
+  color: #e2e8f0;
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
