@@ -174,6 +174,14 @@ export const App: React.FC = () => {
                 return next;
               });
             }}
+            onOpenChannelRack={() => {
+              setOpenWindows((prev) => ({ ...prev, channelrack: true }));
+              bringToFront('channelrack');
+            }}
+            onOpenPianoRoll={() => {
+              setOpenWindows((prev) => ({ ...prev, pianoroll: true }));
+              bringToFront('pianoroll');
+            }}
           />
         </WindowFrame>
 

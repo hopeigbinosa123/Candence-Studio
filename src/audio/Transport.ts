@@ -22,12 +22,22 @@ export class Transport {
   private _loopEnd: number = 16;
   private _metronomeEnabled: boolean = false;
   private _metronomeGain: number = 0.5;
+  private _playMode: 'PAT' | 'SONG' = 'PAT';
 
   private listeners: Set<TransportListener> = new Set();
 
   constructor(bpm: number = 120, timeSig: TimeSignature = { numerator: 4, denominator: 4 }) {
     this._bpm = bpm;
     this._timeSignature = timeSig;
+  }
+
+  public get playMode(): 'PAT' | 'SONG' {
+    return this._playMode;
+  }
+
+  public set playMode(mode: 'PAT' | 'SONG') {
+    this._playMode = mode;
+    this.notify();
   }
 
   public get state(): TransportState {
